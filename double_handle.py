@@ -22,7 +22,7 @@ angle_speed_thresholds = [
 # Mảng chứa các mức tốc độ tương ứng với khoảng cách
 distance_speed_thresholds = [
     (60, 45),   # (Khoảng cách lớn, tốc độ cao)
-    (35, 40),
+    (35, 35),
     (25, 20),
     (15, 10),
     (5, 7)   # (Khoảng cách nhỏ, tốc độ thấp)
@@ -150,6 +150,44 @@ def calculate_speed_from_distance(distance_to_black):
             return speed
     return 7
 
+def adjust_center_based_on_black(image, center_row, checkpoint):
+    """
+    Điều chỉnh center_row dựa trên điểm đen và hai đầu đoạn thẳng gần nhất.
+    """
+    h, w, _ = image.shape
+
+    # Tìm điểm đen gần nhất phía trên center_row
+    black_column = image[:checkpoint, center_row]
+    black_pixels = np.where(black_column == 0)[0]
+    if len(black_pixels) == 0:
+        return center_row  # Không có điểm đen phía trên
+
+    nearest_black_pixel = black_pixels[-1]
+
+    # Kẻ một đường ngang tại điểm đen gần nhất
+    row_data = image[nearest_black_pixel, :]  # Dữ liệu pixel của hàng này
+    white_points = np.where(row_data == 255)[0]
+
+    if len(white_points) < 2:
+        return center_row  # Không có đủ hai điểm trắng để xử lý
+
+    # Lấy hai đầu điểm trắng
+    left_end, right_end = white_points[0], white_points[-1]
+
+    # Tìm trung điểm của đoạn thẳng ngang
+    midpoint_left = (left_end + nearest_black_pixel) // 2
+    midpoint_right = (right_end + nearest_black_pixel) // 2
+
+    # Tính khoảng cách từ hai trung điểm này đến pixel đen gần nhất theo chiều dọc
+    dist_left = calculate_distance_to_black(image, midpoint_left, nearest_black_pixel)
+    dist_right = calculate_distance_to_black(image, midpoint_right, nearest_black_pixel)
+
+    # Chỉnh center_row thành cột chứa trung điểm có khoảng cách xa hơn
+    if dist_left > dist_right:
+        return midpoint_left
+    else:
+        return midpoint_right
+
 # Code điều khiển chính
 if __name__ == "__main__":
     try:
@@ -196,6 +234,8 @@ if __name__ == "__main__":
                 chosen_angle = angle_2
                 chosen_center_row = center_row_2
                 speed_from_angle = calculate_speed_from_angle(angle_2)
+
+            adjusted_center_row = adjust_center_based_on_black(segment_image, chosen_center_row, checkpoint=CHECKPOINT_2)
 
             # Hiển thị cả hai checkpoint lên ảnh
             showImage(cv2.normalize(cv2.cvtColor(segment_image, cv2.COLOR_BGR2GRAY), None, 0, 255, cv2.NORM_MINMAX), center_row_1, center_row_2)
