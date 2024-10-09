@@ -12,17 +12,17 @@ acceleration = 0
 
 # Mảng chứa các mức tốc độ tương ứng với góc đánh lái
 angle_speed_thresholds = [
-    (5, 45),   # (Góc nhỏ, tốc độ cao)
+    (5, 40),   # (Góc nhỏ, tốc độ cao)
     (8, 30),  # (Góc trung bình, tốc độ trung bình)
     (16, 27),  # (Góc lớn hơn, tốc độ giảm)
     (20, 15),  # (Góc lớn, tốc độ giảm nhiều)
-    (25, 7)   # (Góc rất lớn, tốc độ thấp nhất)
+    (25, 10)   # (Góc rất lớn, tốc độ thấp nhất)
 ]
 
 # Mảng chứa các mức tốc độ tương ứng với khoảng cách
 distance_speed_thresholds = [
-    (60, 45),   # (Khoảng cách lớn, tốc độ cao)
-    (50, 35),
+    (60, 40),   # (Khoảng cách lớn, tốc độ cao)
+    (50, 32),
     (20, 25),
     (10, -10),
 ]
@@ -105,7 +105,7 @@ def calculate_distance_to_black(image, center_row, checkpoint):
 
 previous_output = 0
 delta_output = 0
-def pid_controller(angle, dt):
+def pid_controller( final_speed, angle, dt):
     global previous_error, integral, previous_output, delta_output
 
     error = angle
@@ -130,7 +130,8 @@ def pid_controller(angle, dt):
     # Lưu lại giá trị output hiện tại cho lần sau
     delta_output = previous_output
     previous_output = output
-
+    if(final_speed < 0):
+        return 0
     return output
 
 
@@ -146,7 +147,7 @@ def calculate_speed_from_distance(distance_to_black):
     for level, speed in distance_speed_thresholds:
         if distance_to_black >= level:
             return speed
-    return 7
+    return -10
 
 # Code điều khiển chính
 if __name__ == "__main__":
@@ -205,7 +206,7 @@ if __name__ == "__main__":
             final_speed = min(speed_from_angle, speed_from_distance)
 
             # Điều chỉnh PID dựa trên góc đánh lái
-            pid_angle = pid_controller(chosen_angle, dt)
+            pid_angle = pid_controller(final_speed, chosen_angle, dt)
             print(speed_from_angle, speed_from_distance)
 
             print(f"Final Speed: {final_speed}, PID Angle: {pid_angle:.2f}")
